@@ -1,21 +1,19 @@
 #!/bin/bash
+set -e
 
-# === CONFIG ===
-USER=ubuntu
-INSTANCE_IP=$(terraform output -raw control_plane_public_ip)
-KEY_PATH=~/.ssh/natalie_key2.pem
+if [ ! -f /etc/kubernetes/admin.conf ]; then
+  echo "🔧 Initializing Kubernetes cluster..."
+  sudo kubeadm init --pod-network-cidr=192.168.0.0/16
+fi
 
-# === INIT COMMANDS ===
-INIT_COMMANDS=$(cat <<'END'
-sudo kubeadm init --pod-network-cidr=192.168.0.0/16
-
+echo "🔧 Configuring kubectl for current user..."
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
-END
-)
+if ! kubectl get pods -n kube-system | grep -q calico; then
+  echo "🌐 Installing Calico CNI..."
+  sudo kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
+fi
 
-echo "Connecting to $INSTANCE_IP..."
-ssh -i $KEY_PATH $USER@$INSTANCE_IP "$INIT_COMMANDS"
+echo "✅ Control plane initialization completed."
