@@ -1,0 +1,47 @@
+name: Init Kubernetes Control Plane
+
+on:
+  workflow_run:
+    workflows: ["Provision Kubernetes Cluster Infrastructure"]
+    types:
+      - completed
+
+jobs:
+  init-control-plane:
+    name: Initialize K8s Control Plane
+    runs-on: ubuntu-latest
+
+    env:
+      CONTROL_PLANE_TAG_NAME: natalie-control-plane
+      REGION: us-west-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Write private SSH key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Get Control Plane IP from EC2 tag
+        id: get-ip
+        run: |
+          echo "🔍 Finding public IP by tag..."
+          CONTROL_PLANE_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=${{ env.CONTROL_PLANE_TAG_NAME }}" "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
+          echo "✅ Found IP: $CONTROL_PLANE_IP"
+          echo "CONTROL_PLANE_IP=$CONTROL_PLANE_IP" >> $GITHUB_ENV
+
+      - name: Upload init script to control plane instance
+        run: |
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa scripts/init_control_plane.sh ubuntu@$CONTROL_PLANE_IP:/home/ubuntu/init_control_plane.sh
+
+      - name: SSH into control plane and run script
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@$CONTROL_PLANE_IP \
+            'bash /home/ubuntu/init_control_plane.sh'
