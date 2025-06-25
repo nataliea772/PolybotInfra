@@ -61,7 +61,7 @@ resource "aws_iam_role_policy_attachment" "ssm_attach" {
 }
 
 resource "aws_iam_instance_profile" "ssm_instance_profile" {
-  name = "control-plane-k8s-instance-profile"
+  name = "${var.name}-k8s-instance-profile"
   role = aws_iam_role.k8s_control_plane_role.name
 }
 
