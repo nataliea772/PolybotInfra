@@ -34,10 +34,17 @@ jobs:
       working-directory: tf
       run: terraform apply -var-file=region.us-west-1.tfvars -auto-approve
 
+    - name: Write private SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+
     - name: Wait for EC2 to be ready
       run: |
         IP=$(aws ec2 describe-instances \
-          --filters "Name=tag:Name,Values=merry-control-plane" "Name=instance-state-name,Values=running" \
+          --filters "Name=tag:Name,Values=natalie-control-plane" "Name=instance-state-name,Values=running" \
           --query "Reservations[0].Instances[0].PublicIpAddress" \
           --output text)
         echo "Checking SSH connection to $IP ..."
