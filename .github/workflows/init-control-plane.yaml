@@ -32,6 +32,7 @@ jobs:
         run: |
           echo "🔍 Finding public IP by tag..."
           CONTROL_PLANE_IP=$(aws ec2 describe-instances \
+            --region $REGION \
             --filters "Name=tag:Name,Values=${{ env.CONTROL_PLANE_TAG_NAME }}" "Name=instance-state-name,Values=running" \
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
