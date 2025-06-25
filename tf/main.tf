@@ -18,7 +18,6 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region # "us-west-1"
-  profile = "default"
 }
 
 module "network" {
