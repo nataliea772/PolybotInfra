@@ -41,9 +41,9 @@ jobs:
 
       - name: Upload init script to control plane instance
         run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa scripts/init-control-plane.sh ubuntu@$CONTROL_PLANE_IP:/home/ubuntu/init_control_plane.sh
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa scripts/init-control-plane.sh ubuntu@$CONTROL_PLANE_IP:/home/ubuntu/init-control-plane.sh
 
       - name: SSH into control plane and run script
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@$CONTROL_PLANE_IP \
-            'bash /home/ubuntu/init_control_plane.sh'
+            'bash /home/ubuntu/init-control-plane.sh'
