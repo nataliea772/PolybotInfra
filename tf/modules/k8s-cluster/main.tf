@@ -98,7 +98,7 @@ resource "aws_instance" "control_plane" {
   user_data = file("${path.module}/user_data_control_plane.sh")
 
   tags = {
-    Name = "control-plane"
+    Name = "natalie-control-plane"
   }
 }
 
@@ -127,7 +127,7 @@ resource "aws_launch_template" "worker" {
     resource_type = "instance"
 
     tags = {
-      Name = "k8s-worker"
+      Name = "natalie-worker-node"
     }
   }
 }

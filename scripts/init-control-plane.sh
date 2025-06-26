@@ -1,4 +1,5 @@
 #!/bin/bash
+exec > /var/log/user-data.log 2>&1
 set -e
 
 echo "📦 Starting control-plane initialization..."
@@ -6,7 +7,19 @@ echo "📦 Starting control-plane initialization..."
 # Only initialize if not already done
 if [ ! -f /etc/kubernetes/admin.conf ]; then
   echo "🔧 Initializing Kubernetes cluster..."
-  sudo kubeadm init --pod-network-cidr=192.168.0.0/16 | tee /tmp/kubeadm-init.log
+  INIT_OUTPUT=$(sudo kubeadm init --pod-network-cidr=192.168.0.0/16)
+  echo "$INIT_OUTPUT" | tee /tmp/kubeadm-init.log
+
+  # Extract join command
+  JOIN_COMMAND=$(echo "$INIT_OUTPUT" | grep -A 2 "kubeadm join" | tr -d '\\')
+
+  echo "Putting join command to SSM..."
+  aws ssm put-parameter \
+    --name "/k8s/worker-join-command" \
+    --type "SecureString" \
+    --value "$JOIN_COMMAND" \
+    --region us-west-1 \
+    --overwrite
 fi
 
 # Configure kubectl for current user (assumes running as ubuntu or ec2-user)
