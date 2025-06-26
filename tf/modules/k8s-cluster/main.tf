@@ -147,7 +147,7 @@ resource "aws_autoscaling_group" "worker_asg" {
 
   tag {
     key                 = "Name"
-    value               = "k8s-worker"
+    value               = "natalie-worker-node"
     propagate_at_launch = true
   }
 
