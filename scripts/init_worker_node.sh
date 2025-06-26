@@ -1,15 +1,18 @@
 #!/bin/bash
 set -e
 
-# === Fetch the kubeadm join command from SSM ===
 echo "📦 Fetching join command from SSM..."
 
 JOIN_CMD=$(aws ssm get-parameter \
-  --name "/polybot/k8s/join-command" \
+  --name "/k8s/worker-join-command" \
   --with-decryption \
   --region us-west-1 \
   --query "Parameter.Value" \
   --output text)
+
+echo "🧹 Resetting kubeadm to clean state (if needed)..."
+sudo kubeadm reset -f || true
+sudo systemctl restart kubelet
 
 echo "🚀 Running join command..."
 sudo $JOIN_CMD
