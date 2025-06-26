@@ -77,7 +77,6 @@ resource "aws_iam_policy_attachment" "attach_put_parameter_policy" {
   policy_arn = aws_iam_policy.put_parameter_policy.arn
 }
 
-
 # Policies for the IAM Role
 resource "aws_iam_role_policy_attachment" "ssm_attach" {
   role       = aws_iam_role.k8s_control_plane_role.name
@@ -106,5 +105,21 @@ resource "aws_instance" "control_plane" {
 
   tags = {
     Name = "natalie-control-plane"
+  }
+}
+
+resource "aws_instance" "worker_node" {
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [aws_security_group.k8s_control_plane_sg.id]
+  key_name               = var.key_name
+  associate_public_ip_address = true
+  iam_instance_profile   = aws_iam_instance_profile.ssm_instance_profile.name
+
+  user_data = file("${path.module}/user_data.sh")
+
+  tags = {
+    Name = "natalie-worker-node"
   }
 }
