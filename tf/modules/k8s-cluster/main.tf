@@ -54,6 +54,30 @@ resource "aws_iam_role" "k8s_control_plane_role" {
   })
 }
 
+resource "aws_iam_policy" "put_parameter_policy" {
+  name        = "AllowPutParameter"
+  description = "Allow EC2 to put kubeadm join command into SSM Parameter Store"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ssm:PutParameter"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy_attachment" "attach_put_parameter_policy" {
+  name       = "AttachPutParameterPolicy"
+  roles      = [aws_iam_role.k8s_control_plane_role.name]
+  policy_arn = aws_iam_policy.put_parameter_policy.arn
+}
+
+
 # Policies for the IAM Role
 resource "aws_iam_role_policy_attachment" "ssm_attach" {
   role       = aws_iam_role.k8s_control_plane_role.name
