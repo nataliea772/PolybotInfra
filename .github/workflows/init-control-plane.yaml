@@ -36,6 +36,12 @@ jobs:
             --filters "Name=tag:Name,Values=${{ env.CONTROL_PLANE_TAG_NAME }}" "Name=instance-state-name,Values=running" \
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
+          
+          if [[ "$CONTROL_PLANE_IP" == "None" || -z "$CONTROL_PLANE_IP" ]]; then
+            echo "❌ ERROR: Control Plane IP not found. Is the EC2 instance running and correctly tagged?"
+            exit 1
+          fi
+          
           echo "✅ Found IP: $CONTROL_PLANE_IP"
           echo "CONTROL_PLANE_IP=$CONTROL_PLANE_IP" >> $GITHUB_ENV
 
