@@ -50,4 +50,5 @@ module "k8s_cluster" {
   desired_capacity = var.desired_capacity
   min_size         = var.min_size
   max_size         = var.max_size
+  name             = var.name
 }
