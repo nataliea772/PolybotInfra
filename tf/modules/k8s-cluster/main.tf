@@ -73,9 +73,10 @@ resource "aws_iam_policy" "put_parameter_policy" {
 
 resource "aws_iam_policy_attachment" "attach_put_parameter_policy" {
   name       = "AttachPutParameterPolicy"
-  roles      = [aws_iam_role.k8s_control_plane_role.name]
   policy_arn = aws_iam_policy.put_parameter_policy.arn
+  roles      = [aws_iam_role.k8s_control_plane_role.name]
 }
+
 
 # Policies for the IAM Role
 resource "aws_iam_role_policy_attachment" "ssm_attach" {
