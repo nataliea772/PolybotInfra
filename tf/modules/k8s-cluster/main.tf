@@ -12,7 +12,6 @@ resource "aws_subnet" "natalie_subnet" {
   }
 }
 
-
 ##########################################
 # Security Group for Control Plane + Worker
 ##########################################
@@ -152,15 +151,18 @@ resource "aws_autoscaling_group" "worker_asg" {
   min_size                  = 1
   desired_capacity          = 1
   vpc_zone_identifier       = [aws_subnet.natalie_subnet.id]
+
   launch_template {
     id      = aws_launch_template.worker_template.id
     version = "$Latest"
   }
+
   tag {
     key                 = "Name"
     value               = "natalie-worker-node"
     propagate_at_launch = true
   }
+
   lifecycle {
     create_before_destroy = true
   }
