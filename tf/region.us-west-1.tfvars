@@ -1,3 +1,4 @@
+name               = "natalie"
 aws_region         = "us-west-1"
 key_name           = "natalie_key2"
 instance_type      = "t3.medium"
