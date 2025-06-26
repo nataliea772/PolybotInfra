@@ -98,6 +98,10 @@ resource "aws_instance" "control_plane" {
   associate_public_ip_address = true
   iam_instance_profile   = aws_iam_instance_profile.ssm_instance_profile.name
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   user_data = file("${path.module}/user_data.sh")
 
   tags = {
