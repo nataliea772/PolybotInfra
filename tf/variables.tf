@@ -48,3 +48,8 @@ variable "max_size" {
   type        = number
 }
 
+variable "public_subnets" {
+  description = "List of public subnet CIDRs"
+  type        = list(string)
+}
+
