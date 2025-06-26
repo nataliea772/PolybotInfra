@@ -136,10 +136,17 @@ resource "aws_autoscaling_group" "worker_asg" {
   min_size                  = 1
   desired_capacity          = 1
   vpc_zone_identifier       = [var.subnet_id]
+
   launch_template {
     id      = aws_launch_template.worker_template.id
     version = "$Latest"
   }
+
+  # 👇 NEW: force public IP association
+  instance_market_options {
+    market_type = "on-demand"
+  }
+
   tag {
     key                 = "Name"
     value               = "natalie-worker-node"
