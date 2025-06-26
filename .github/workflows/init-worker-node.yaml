@@ -1,7 +1,11 @@
 name: Init Kubernetes Worker Node
 
 on:
-  workflow_dispatch:  # You run it manually
+  workflow_run:
+    workflows: ["Provision Kubernetes Cluster Infrastructure"]
+    types:
+      - completed
+
 
 jobs:
   init-worker:
