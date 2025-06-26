@@ -1,18 +1,4 @@
 ##########################################
-# Custom Subnet with public IP assignment
-##########################################
-resource "aws_subnet" "natalie_subnet" {
-  vpc_id                  = var.vpc_id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-west-1a"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "natalie-subnet"
-  }
-}
-
-##########################################
 # Security Group for Control Plane + Worker
 ##########################################
 resource "aws_security_group" "k8s_cluster_sg" {
@@ -101,7 +87,7 @@ resource "aws_iam_instance_profile" "k8s_profile" {
 resource "aws_instance" "control_plane" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.natalie_subnet.id
+  subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [aws_security_group.k8s_cluster_sg.id]
   key_name                    = var.key_name
   associate_public_ip_address = true
@@ -150,7 +136,7 @@ resource "aws_autoscaling_group" "worker_asg" {
   max_size                  = 3
   min_size                  = 1
   desired_capacity          = 1
-  vpc_zone_identifier       = [aws_subnet.natalie_subnet.id]
+  vpc_zone_identifier       = [var.subnet_id]
 
   launch_template {
     id      = aws_launch_template.worker_template.id
