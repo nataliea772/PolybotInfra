@@ -42,7 +42,7 @@ resource "aws_security_group" "control_plane_sg" {
 # IAM Role and Profile for EC2 (SSM + SSM Param Write)
 ##########################################
 resource "aws_iam_role" "ssm_role" {
-  name = "${var.name}-k8s-role"
+  name = "${var.name}-k8s-role-us-west-1"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -54,7 +54,7 @@ resource "aws_iam_role" "ssm_role" {
 }
 
 resource "aws_iam_policy" "put_parameter_policy" {
-  name = "${var.name}-PutJoinCommand"
+  name = "${var.name}-PutJoinCommand-us-west-1"
   description = "Allow EC2 to put kubeadm join command into SSM Parameter Store"
   policy      = jsonencode({
     Version = "2012-10-17",
