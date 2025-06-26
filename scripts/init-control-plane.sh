@@ -28,3 +28,14 @@ if ! kubectl get pods -n kube-system | grep -q calico; then
 fi
 
 echo "✅ Control plane initialization completed."
+
+echo "📦 Saving kubeadm join command to SSM... (for worker node)"
+JOIN_CMD=$(kubeadm token create --print-join-command)
+aws ssm put-parameter \
+  --name "/k8s/worker-join-command" \
+  --type "SecureString" \
+  --value "$JOIN_CMD" \
+  --overwrite \
+  --region us-west-1
+
+echo "✅ Join command saved to SSM."
