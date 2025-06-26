@@ -17,7 +17,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region # "us-west-1"
+  region = var.aws_region # "us-west-1"
 }
 
 module "network" {
@@ -41,12 +41,13 @@ module "network" {
 }
 
 module "k8s_cluster" {
-  source        = "./modules/k8s-cluster"
-  vpc_id        = module.network.vpc_id
-  subnet_id     = module.network.public_subnets[0]
-  key_name      = var.key_name
-  instance_type = var.instance_type
-  ami_id        = var.ami_id
-  vpc_cidr      = var.vpc_cidr
-  name          = var.name
+  source           = "./modules/k8s-cluster"
+  vpc_id           = module.network.vpc_id
+  subnet_id        = module.network.public_subnets[0]
+  key_name         = var.key_name
+  instance_type    = var.instance_type
+  ami_id           = var.ami_id
+  desired_capacity = var.desired_capacity
+  min_size         = var.min_size
+  max_size         = var.max_size
 }

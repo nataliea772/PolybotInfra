@@ -10,6 +10,6 @@ output "control_plane_public_ip" {
 
 output "worker_asg_name" {
   description = "Name of the Auto Scaling Group for worker nodes"
-  value = aws_autoscaling_group.worker_asg.name
+  value       = aws_autoscaling_group.worker_asg.name
 }
 

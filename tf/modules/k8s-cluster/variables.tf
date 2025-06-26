@@ -23,12 +23,20 @@ variable "ami_id" {
   description = "AMI ID for EC2"
 }
 
-variable "vpc_cidr" {
-  description = "CIDR of the VPC"
-  type        = string
+variable "desired_capacity" {
+  type        = number
+  description = "Desired number of worker nodes in ASG"
+  default     = 2
 }
 
-variable "name" {
-  description = "Name prefix for resources"
-  type        = string
+variable "min_size" {
+  type        = number
+  description = "Minimum number of worker nodes in ASG"
+  default     = 1
+}
+
+variable "max_size" {
+  type        = number
+  description = "Maximum number of worker nodes in ASG"
+  default     = 3
 }
