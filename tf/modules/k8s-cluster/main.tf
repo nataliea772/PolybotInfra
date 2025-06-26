@@ -64,7 +64,7 @@ resource "aws_iam_policy" "put_param" {
     Version = "2012-10-17",
     Statement = [{
       Effect   = "Allow",
-      Action   = ["ssm:PutParameter", "ssm:GetParameter"],
+      Action   = ["ssm:PutParameter", "ssm:GetParameter", "ec2:DescribeInstances"],
       Resource = "*"
     }]
   })
