@@ -51,3 +51,6 @@ sudo systemctl enable --now kubelet
 sudo sed -i.bak '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 sudo swapoff -a
 (crontab -l ; echo "@reboot /sbin/swapoff -a") | crontab -
+
+echo "✅ User data script completed successfully"
+
