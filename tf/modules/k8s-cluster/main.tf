@@ -55,7 +55,7 @@ resource "aws_iam_role" "k8s_control_plane_role" {
 }
 
 resource "aws_iam_policy" "put_parameter_policy" {
-  name        = "AllowPutParameter"
+  name        = "${var.name}-AllowPutParameter"
   description = "Allow EC2 to put kubeadm join command into SSM Parameter Store"
   policy      = jsonencode({
     Version = "2012-10-17",
