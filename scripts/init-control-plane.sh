@@ -31,8 +31,11 @@ echo "✅ Control plane initialization completed."
 
 echo "📦 Saving kubeadm join command to SSM... (for worker node)"
 JOIN_CMD=$(kubeadm token create --print-join-command)
+
+echo "AWS CLI version:" && aws --version
+
 aws ssm put-parameter \
-  --name "/k8s/worker-join-command" \
+  --name "/polybot/k8s/join-command" \
   --type "SecureString" \
   --value "$JOIN_CMD" \
   --overwrite \
