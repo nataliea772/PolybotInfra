@@ -9,7 +9,7 @@ resource "aws_security_group" "k8s_control_plane_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr] #["0.0.0.0/0"] # change to my ip
+    cidr_blocks = ["0.0.0.0/0"] #[var.vpc_cidr] # change to my ip
   }
 
   ingress {
