@@ -3,72 +3,59 @@ set -e
 
 echo "📦 Starting control-plane initialization..."
 
-# initialize only id not already done
+# Only initialize if not already done
 if [ ! -f /etc/kubernetes/admin.conf ]; then
   echo "🔧 Initializing Kubernetes cluster..."
   sudo kubeadm init --pod-network-cidr=192.168.0.0/16 | tee /tmp/kubeadm-init.log
 fi
 
-echo "🔧 Configuring kubectl for current user..."
+# Configure kubectl for current user (assumes running as ubuntu or ec2-user)
 mkdir -p $HOME/.kube
-sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-
+# Install Calico if not already installed
 if ! kubectl get pods -n kube-system | grep -q calico; then
-  echo "🌐 Installing Calico CNI..."
+  echo "Installing Calico CNI..."
   kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
 fi
 
-echo "⏳ Waiting for Kubernetes API server to become available..."
+# Wait for API server to become responsive
+echo "⏳ Waiting for Kubernetes API server to be ready..."
 for i in {1..30}; do
   if kubectl get nodes &> /dev/null; then
-    echo "✅ API server is up!"
+    echo "✅ API server is up."
     break
   else
-    echo "Waiting for API server..."
-    sleep 10
+    echo "Waiting for API server... ($i/30)"
+    sleep 5
   fi
 done
 
-echo "✅ Control plane initialization completed."
 
-echo "📦 Saving kubeadm join command to SSM... (for worker node)"
-JOIN_CMD=$(kubeadm token create --print-join-command)
+# Retry loop to wait for the join command
+MAX_RETRIES=30
+RETRY_DELAY=10
+for i in $(seq 1 $MAX_RETRIES); do
+  echo "Attempt $i to fetch join command from SSM..."
+  JOIN_COMMAND=$(aws ssm get-parameter \
+    --name "/k8s/worker-join-command" \
+    --region us-west-1 \
+    --with-decryption \
+    --query "Parameter.Value" \
+    --output text) && break
 
-echo "AWS CLI version:" && aws --version
+  echo "Join command not available yet. Retrying in $RETRY_DELAY seconds..."
+  sleep $RETRY_DELAY
+done
 
-aws ssm put-parameter \
-  --name "/polybot/k8s/join-command" \
-  --type "SecureString" \
-  --value "$JOIN_CMD" \
-  --overwrite \
-  --region us-west-1
+if [ -z "$JOIN_COMMAND" ]; then
+  echo "❌ Failed to retrieve join command from SSM after $MAX_RETRIES attempts"
+  exit 1
+fi
 
-echo "✅ Join command saved to SSM."
-
-echo "🕒 Setting up cron job to refresh kubeadm join token..."
-
-cat <<'EOF' | sudo tee /etc/cron.d/refresh-join-token
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-
-*/30 * * * * root /usr/local/bin/refresh-join-token.sh
-EOF
-
-cat <<'EOF' | sudo tee /usr/local/bin/refresh-join-token.sh
-#!/bin/bash
-set -e
-
-JOIN_CMD=$(kubeadm token create --print-join-command)
-aws ssm put-parameter \
-  --name "/polybot/k8s/join-command" \
-  --type "SecureString" \
-  --value "$JOIN_CMD" \
-  --overwrite \
-  --region us-west-1
-EOF
-
-sudo chmod +x /usr/local/bin/refresh-join-token.sh
-systemctl restart cron || systemctl restart crond || echo "Cron service restart failed"
-
+# Only join if not already joined
+if [ ! -f /etc/kubernetes/kubelet.conf ]; then
+  echo "Running kubeadm join..."
+  $JOIN_COMMAND
+fi

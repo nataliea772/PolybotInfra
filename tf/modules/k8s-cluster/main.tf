@@ -1,8 +1,8 @@
 ##########################################
 # Security Group for Control Plane + Worker
 ##########################################
-resource "aws_security_group" "k8s_cluster_sg" {
-  name        = "k8s-cluster-sg"
+resource "aws_security_group" "control_plane_sg" {
+  name        = "control-plane-sg"
   description = "Allow SSH and Kubernetes ports"
   vpc_id      = var.vpc_id
 
@@ -23,11 +23,11 @@ resource "aws_security_group" "k8s_cluster_sg" {
   }
 
   ingress {
-    description = "Inter-node communication"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    description = "Allow worker nodes to reach control-plane (e.g. kubelet)"
+    from_port       = 10250
+    to_port         = 10250
+    protocol        = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
   }
 
   egress {
@@ -41,7 +41,7 @@ resource "aws_security_group" "k8s_cluster_sg" {
 ##########################################
 # IAM Role and Profile for EC2 (SSM + SSM Param Write)
 ##########################################
-resource "aws_iam_role" "k8s_role" {
+resource "aws_iam_role" "ssm_role" {
   name = "${var.name}-k8s-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -53,103 +53,144 @@ resource "aws_iam_role" "k8s_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ssm" {
-  role       = aws_iam_role.k8s_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_policy" "put_param" {
-  name   = "${var.name}-PutJoinCommand"
-  policy = jsonencode({
+resource "aws_iam_policy" "put_parameter_policy" {
+  name        = "AllowPutParameter"
+  description = "Allow EC2 to put kubeadm join command into SSM Parameter Store"
+  policy      = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect   = "Allow",
-      Action   = ["ssm:PutParameter", "ssm:GetParameter", "ec2:DescribeInstances"],
-      Resource = "*"
-    }]
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ssm:PutParameter",
+          "ec2:DescribeInstances"
+        ],
+        Resource = "*"
+      }
+    ]
   })
 }
 
-resource "aws_iam_policy_attachment" "attach_put_param" {
-  name       = "AttachPutParam"
-  policy_arn = aws_iam_policy.put_param.arn
-  roles      = [aws_iam_role.k8s_role.name]
+resource "aws_iam_role_policy_attachment" "put_parameter_attach" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = aws_iam_policy.put_parameter_policy.arn
 }
 
-resource "aws_iam_instance_profile" "k8s_profile" {
-  name = "${var.name}-k8s-profile"
-  role = aws_iam_role.k8s_role.name
+resource "aws_iam_role_policy_attachment" "ssm_attach" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-##########################################
-# Control Plane EC2 Instance
-##########################################
+resource "aws_iam_instance_profile" "ssm_instance_profile" {
+  name = "k8s-control-plane-instance-profile"
+  role = aws_iam_role.ssm_role.name
+}
+
 resource "aws_instance" "control_plane" {
-  ami                         = var.ami_id
-  instance_type               = var.instance_type
-  subnet_id                   = var.subnet_id
-  vpc_security_group_ids      = [aws_security_group.k8s_cluster_sg.id]
-  key_name                    = var.key_name
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [aws_security_group.control_plane_sg.id]
+  key_name               = var.key_name
   associate_public_ip_address = true
-  iam_instance_profile        = aws_iam_instance_profile.k8s_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ssm_instance_profile.name
 
   user_data = file("${path.module}/user_data_control_plane.sh")
 
   tags = {
-    Name = "natalie-control-plane"
+    Name = "control-plane"
   }
 }
 
-
-##########################################
-# Launch Template for Worker Nodes
-##########################################
-resource "aws_launch_template" "worker_template" {
-  name_prefix   = "natalie-worker-template-"
+resource "aws_launch_template" "worker" {
+  name_prefix   = "k8s-worker"
   image_id      = var.ami_id
   instance_type = var.instance_type
-  key_name      = var.key_name
+  key_name = var.key_name
 
   iam_instance_profile {
-    name = aws_iam_instance_profile.k8s_profile.name
+    name = aws_iam_instance_profile.ssm_instance_profile.name
   }
+
+  user_data = base64encode(file("${path.module}/user_data_worker.sh"))
 
   network_interfaces {
     associate_public_ip_address = true
-    security_groups             = [aws_security_group.k8s_cluster_sg.id]
+    subnet_id                   = var.subnet_id
+    security_groups = [
+        aws_security_group.control_plane_sg.id,
+        aws_security_group.worker_sg.id
+    ]
   }
-  user_data = filebase64("${path.module}/user_data_worker.sh")
 
   tag_specifications {
     resource_type = "instance"
+
     tags = {
-      Name = "natalie-worker-node"
+      Name = "k8s-worker"
     }
   }
 }
 
-##########################################
-# Auto Scaling Group for Worker Nodes
-##########################################
 resource "aws_autoscaling_group" "worker_asg" {
-  name                      = "natalie-worker-asg"
-  max_size                  = 3
-  min_size                  = 1
-  desired_capacity          = 1
-  vpc_zone_identifier       = [var.subnet_id]
+  name                      = "k8s-worker-asg"
+  max_size                  = var.max_size
+  min_size                  = var.min_size
+  desired_capacity          = var.desired_capacity
+  health_check_type         = "EC2"
+  force_delete              = true
 
   launch_template {
-    id      = aws_launch_template.worker_template.id
+    id      = aws_launch_template.worker.id
     version = "$Latest"
   }
 
   tag {
     key                 = "Name"
-    value               = "natalie-worker-node"
+    value               = "k8s-worker"
     propagate_at_launch = true
   }
 
+
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+resource "aws_security_group" "worker_sg" {
+  name        = "worker-sg"
+  description = "Allow traffic for K8s worker nodes"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Allow SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow control-plane to access kubelet"
+    from_port       = 10250
+    to_port         = 10250
+    protocol        = "tcp"
+    security_groups = [aws_security_group.control_plane_sg.id]
+  }
+
+  ingress {
+    description = "Allow NodePort range"
+    from_port   = 30000
+    to_port     = 32767
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
