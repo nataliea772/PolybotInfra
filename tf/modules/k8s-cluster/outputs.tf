@@ -13,6 +13,3 @@ output "worker_asg_name" {
   value = aws_autoscaling_group.worker_asg.name
 }
 
-# output "worker_public_ip" {
-#   value = aws_instance.worker_node.public_ip
-# }
