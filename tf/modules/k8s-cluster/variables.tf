@@ -40,3 +40,8 @@ variable "max_size" {
   description = "Maximum number of worker nodes in ASG"
   default     = 3
 }
+
+variable "name" {
+  description = "Prefix for naming resources like IAM roles"
+  type        = string
+}

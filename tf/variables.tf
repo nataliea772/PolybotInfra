@@ -32,3 +32,19 @@ variable "vpc_cidr" {
   description = "VPC CIDR block (used for SG rules)"
   type        = string
 }
+
+variable "desired_capacity" {
+  description = "Desired number of worker nodes"
+  type        = number
+}
+
+variable "min_size" {
+  description = "Minimum number of worker nodes"
+  type        = number
+}
+
+variable "max_size" {
+  description = "Maximum number of worker nodes"
+  type        = number
+}
+
