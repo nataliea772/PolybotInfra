@@ -2,7 +2,7 @@ name: Init Kubernetes Worker Node
 
 on:
   workflow_run:
-    workflows: ["Provision Kubernetes Cluster Infrastructure"]
+    workflows: ["Init Kubernetes Control Plane"]
     types:
       - completed
 
