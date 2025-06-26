@@ -113,8 +113,10 @@ resource "aws_launch_template" "worker_template" {
     name = aws_iam_instance_profile.k8s_profile.name
   }
 
-  vpc_security_group_ids = [aws_security_group.k8s_cluster_sg.id]
-
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.k8s_cluster_sg.id]
+  }
   user_data = filebase64("${path.module}/user_data_worker.sh")
 
   tag_specifications {
