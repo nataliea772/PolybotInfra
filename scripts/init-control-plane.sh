@@ -1,8 +1,13 @@
 #!/bin/bash
-exec > /var/log/user-data.log 2>&1
 set -e
 
 echo "📦 Starting control-plane initialization..."
+
+# Check for kubeadm
+if ! command -v kubeadm &> /dev/null; then
+  echo "❌ kubeadm not installed. Did user_data run correctly?"
+  exit 1
+fi
 
 # Only initialize if not already done
 if [ ! -f /etc/kubernetes/admin.conf ]; then
