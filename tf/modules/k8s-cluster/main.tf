@@ -42,7 +42,7 @@ resource "aws_security_group" "control_plane_sg" {
 # IAM Role and Profile for EC2 (SSM + SSM Param Write)
 ##########################################
 resource "aws_iam_role" "ssm_role" {
-  name = "${var.name}-k8s-role-us-west-1"
+  name = "${var.name}-k8s-role-${terraform.workspace}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -54,7 +54,7 @@ resource "aws_iam_role" "ssm_role" {
 }
 
 resource "aws_iam_policy" "put_parameter_policy" {
-  name = "${var.name}-PutJoinCommand-us-west-1"
+  name = "${var.name}-PutJoinCommand-${terraform.workspace}"
   description = "Allow EC2 to put kubeadm join command into SSM Parameter Store"
   policy      = jsonencode({
     Version = "2012-10-17",
@@ -82,7 +82,7 @@ resource "aws_iam_role_policy_attachment" "ssm_attach" {
 }
 
 resource "aws_iam_instance_profile" "ssm_instance_profile" {
-  name = "k8s-control-plane-instance-profile"
+  name = "${var.name}-instance-profile-${terraform.workspace}"
   role = aws_iam_role.ssm_role.name
 }
 
