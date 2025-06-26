@@ -69,6 +69,6 @@ aws ssm put-parameter \
   --region us-west-1
 EOF
 
-chmod +x /usr/local/bin/refresh-join-token.sh
+sudo chmod +x /usr/local/bin/refresh-join-token.sh
 systemctl restart cron || systemctl restart crond || echo "Cron service restart failed"
 
