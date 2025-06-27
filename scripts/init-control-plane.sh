@@ -29,7 +29,7 @@ fi
 
 # Configure kubectl for current user (assumes running as ubuntu or ec2-user)
 mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 # Install Calico if not already installed
