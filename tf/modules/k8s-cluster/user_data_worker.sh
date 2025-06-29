@@ -10,6 +10,12 @@ hostnamectl set-hostname "natalie-worker-$(date +%s)"
 apt-get update
 apt-get install -y jq unzip ebtables ethtool curl gnupg lsb-release ca-certificates apt-transport-https software-properties-common
 
+# Install AWS CLI v2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip -q awscliv2.zip
+./aws/install
+export PATH=$PATH:/usr/local/bin
+
 # Add keyrings directory
 mkdir -p /etc/apt/keyrings
 
