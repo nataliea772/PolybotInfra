@@ -41,21 +41,27 @@ swapoff -a
 echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-kubernetes-cri.conf
 sysctl --system
 
-# Fetch and run join command from SSM
+# Wait until join command is available in SSM
 REGION="us-west-1"
-JOIN_COMMAND=$(aws ssm get-parameter \
-  --name "/k8s/worker-join-command" \
-  --region $REGION \
-  --with-decryption \
-  --query "Parameter.Value" \
-  --output text)
-
 MAX_RETRIES=30
 RETRY_DELAY=10
 
 for i in $(seq 1 $MAX_RETRIES); do
-  echo "Attempt $i: joining the cluster..."
-  $JOIN_COMMAND && break
-  echo "Join failed, retrying in $RETRY_DELAY seconds..."
+  echo "Attempt $i: Fetching join command from SSM..."
+  JOIN_COMMAND=$(aws ssm get-parameter \
+    --name "/k8s/worker-join-command" \
+    --region $REGION \
+    --with-decryption \
+    --query "Parameter.Value" \
+    --output text) && break
+  echo "Join command not yet available. Retrying in $RETRY_DELAY seconds..."
   sleep $RETRY_DELAY
 done
+
+if [ -z "$JOIN_COMMAND" ]; then
+  echo "❌ Failed to retrieve join command"
+  exit 1
+fi
+
+# Run the join command
+$JOIN_COMMAND
