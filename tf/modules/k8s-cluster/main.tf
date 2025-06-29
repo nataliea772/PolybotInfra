@@ -30,6 +30,14 @@ resource "aws_security_group" "control_plane_sg" {
     cidr_blocks = ["10.0.0.0/16"]
   }
 
+  ingress {
+  description = "Allow internal control-plane access (API server)"
+  from_port   = 6443
+  to_port     = 6443
+  protocol    = "tcp"
+  cidr_blocks = ["10.0.0.0/16"]
+}
+
   egress {
     from_port   = 0
     to_port     = 0
