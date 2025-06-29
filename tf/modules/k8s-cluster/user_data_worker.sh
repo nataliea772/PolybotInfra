@@ -3,6 +3,9 @@ set -e
 
 KUBERNETES_VERSION=v1.32
 
+# Set custom hostname
+hostnamectl set-hostname "natalie-worker-$(date +%s)"
+
 # Update and install dependencies
 apt-get update
 apt-get install -y jq unzip ebtables ethtool curl gnupg lsb-release ca-certificates apt-transport-https software-properties-common
@@ -47,4 +50,12 @@ JOIN_COMMAND=$(aws ssm get-parameter \
   --query "Parameter.Value" \
   --output text)
 
-$JOIN_COMMAND
+MAX_RETRIES=30
+RETRY_DELAY=10
+
+for i in $(seq 1 $MAX_RETRIES); do
+  echo "Attempt $i: joining the cluster..."
+  $JOIN_COMMAND && break
+  echo "Join failed, retrying in $RETRY_DELAY seconds..."
+  sleep $RETRY_DELAY
+done
