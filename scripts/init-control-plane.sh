@@ -50,7 +50,6 @@ for i in {1..30}; do
   fi
 done
 
-
 # Retry loop to wait for the join command
 MAX_RETRIES=30
 RETRY_DELAY=10
