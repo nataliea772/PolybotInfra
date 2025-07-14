@@ -50,6 +50,7 @@ sysctl --system
 # Wait for the join command from SSM
 MAX_RETRIES=30
 RETRY_DELAY=10
+REGION="us-west-1"
 
 for i in $(seq 1 $MAX_RETRIES); do
   echo "Attempt $i: Fetching join command from SSM..."
