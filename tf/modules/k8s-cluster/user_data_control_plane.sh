@@ -2,7 +2,7 @@
 exec > /var/log/user-data.log 2>&1
 set -e
 
-KUBERNETES_VERSION=v1.32
+KUBERNETES_VERSION=1.32
 
 # Set hostname
 sudo hostnamectl set-hostname control-plane
