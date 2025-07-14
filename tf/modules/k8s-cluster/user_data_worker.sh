@@ -1,52 +1,46 @@
 #!/bin/bash
 set -e
 
+# These instructions are for Kubernetes v1.32.
 KUBERNETES_VERSION=v1.32
-REGION="us-west-1"
 
-# Set unique hostname
-hostnamectl set-hostname "natalie-worker-$(date +%s)"
+sudo apt-get update
+sudo apt-get install jq unzip ebtables ethtool -y
 
-# Update system and install base dependencies
-apt-get update
-apt-get install -y jq unzip ebtables ethtool curl gnupg lsb-release ca-certificates apt-transport-https software-properties-common
-
-# Install AWS CLI - v2
+# install awscli
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip -q awscliv2.zip
-./aws/install
-export PATH=$PATH:/usr/local/bin
+unzip awscliv2.zip
+sudo ./aws/install
 
-# Add keyrings directory
-mkdir -p /etc/apt/keyrings
+# Enable IPv4 packet forwarding. sysctl params required by setup, params persist across reboots
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.ipv4.ip_forward = 1
+EOF
 
-# Add Kubernetes repo
-curl -fsSL https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/Release.key \
-  | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# Apply sysctl params without reboot
+sudo sysctl --system
 
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/ /" \
-  > /etc/apt/sources.list.d/kubernetes.list
+# Install cri-o kubelet kubeadm kubectl
+curl -fsSL https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
-# Add CRI-O repo
-curl -fsSL https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/Release.key \
-  | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
+curl -fsSL https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/ /" | sudo tee /etc/apt/sources.list.d/cri-o.list
 
-echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/ /" \
-  > /etc/apt/sources.list.d/cri-o.list
+sudo apt-get update
+sudo apt-get install -y software-properties-common apt-transport-https ca-certificates curl gpg
+sudo apt-get install -y cri-o kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
 
-# Install Kubernetes components and container runtime
-apt-get update
-apt-get install -y cri-o kubelet kubeadm kubectl
-apt-mark hold kubelet kubeadm kubectl
+# start the CRIO container runtime and kubelet
+sudo systemctl start crio.service
+sudo systemctl enable --now crio.service
+sudo systemctl enable --now kubelet
 
-# Enable and start required services
-systemctl daemon-reexec
-systemctl enable --now crio
-systemctl enable --now kubelet
-
-# Disable swap
-sed -i.bak '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+# disable swap memory
 swapoff -a
+
+# add the command to crontab to make it persistent across reboots
 (crontab -l ; echo "@reboot /sbin/swapoff -a") | crontab -
 
 # Enable IP forwarding
