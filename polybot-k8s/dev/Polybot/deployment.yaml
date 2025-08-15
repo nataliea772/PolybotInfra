@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polybot
+  labels:
+    app: polybot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: polybot
+  template:
+    metadata:
+      labels:
+        app: polybot
+    spec:
+      containers:
+        - name: polybot
+
+          image: nataliea7/polybot-dev:51
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: polybot-env
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-polybot
+spec:
+  selector:
+    app: polybot
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
